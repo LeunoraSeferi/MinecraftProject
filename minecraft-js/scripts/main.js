@@ -1,9 +1,10 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
-import { createUI } from './ui';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { World } from './world';
 import { Player } from './player';
+import { Physics } from './physics.js';
+import { createUI } from './ui.js';
 
 
 // UI Setup
@@ -36,7 +37,7 @@ scene.add(world);
 
 
 const player = new Player(scene);
-
+const physics = new Physics(scene);
 
 // Lighting setup
 function setupLights() {
@@ -69,13 +70,13 @@ let previousTime=performance.now();
 function animate() {
     let currentTime=performance.now();
     let dt =(currentTime - previousTime) / 1000;
+
     requestAnimationFrame(animate);
-    player.applyInputs(dt);
+    physics.update(dt,player,world);
     renderer.render(scene,player.controls.isLocked ? player.camera:
     orbitCamera);
     stats.update();
-
-
+    
     previousTime=currentTime;
 }
 
