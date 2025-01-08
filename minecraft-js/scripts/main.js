@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
 import { createUI } from './ui';
 import { World } from './world';
+import { Player } from './player';
 
 
 // UI Setup
@@ -34,6 +35,9 @@ world.generate();
 scene.add(world);
 
 
+const player = new Player(scene);
+
+
 // Lighting setup
 function setupLights() {
     const sun = new THREE.DirectionalLight();
@@ -63,7 +67,7 @@ function setupLights() {
 // Render loop
 function animate() {
     requestAnimationFrame(animate);
-    renderer.render(scene, camera);
+    renderer.render(scene, player.camera);
     stats.update();
 }
 
