@@ -230,7 +230,7 @@ export class Physics
    * Visualizes the contact at the point 'p'
    * @param {{ x, y, z }} p 
    */
-    addContactPointHelper(p) {
+    addContactPointerHelper(p) {
         const contactMesh = new THREE.Mesh(contactGeometry, contactMaterial);
         contactMesh.position.copy(p);
         this.helpers.add(contactMesh);
