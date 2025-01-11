@@ -17,6 +17,7 @@ export class WorldChunk extends THREE.Group {
 
     constructor(size,params) {
         super();
+        this.loaded=false;
         this.size = size;
         this.params=params;
     }
@@ -26,11 +27,17 @@ export class WorldChunk extends THREE.Group {
      * Generates the world data and meshes
      */
      generate() {
+        const start = performance.now();
+
         const rng = new RNG(this.params.seed);
         this.initializeTerrain()
         this.generateResources(rng);
         this.generateTerrain(rng);
         this.generateMeshes();
+
+        this.loaded=true;
+
+        console.log(`Loaded chunk in ${performance.now() - start}ms`);
     }
 
     /**
@@ -64,11 +71,9 @@ initializeTerrain() {
             for (let y = 0; y < this.size.height; y++) {
                 for (let z = 0; z < this.size.width; z++) {
                     const value = simplex.noise3d(
-                        x / resource.scale.x,
-                        y / resource.scale.y,
-                        z / resource.scale.z
-                    );
-
+                        (this.position.x + x) / resource.scale.x,
+                        (this.position.y + y) / resource.scale.y,
+                        (this.position.z + z) / resource.scale.z);
                     if (value > resource.scarcity) {
                         this.setBlockId(x, y, z, resource.id);
                     }
@@ -82,11 +87,6 @@ initializeTerrain() {
 
 
 
-
-
-
-
-
 /**
  * Generates the terrain data for the world
  */
@@ -94,10 +94,11 @@ initializeTerrain() {
     const simplex = new SimplexNoise(rng);
     for (let x = 0; x < this.size.width; x++) {
         for (let z = 0; z < this.size.width; z++) {
+
             // Compute the noise value at this x-z location
             const value = simplex.noise(
-                x / this.params.terrain.scale,
-                z / this.params.terrain.scale
+                (this.position.x + x) / this.params.terrain.scale,
+                (this.position.z + z) / this.params.terrain.scale
             );
 
             // Scale the noise based on the magnitude/offset
