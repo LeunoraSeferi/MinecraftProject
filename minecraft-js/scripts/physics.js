@@ -111,7 +111,7 @@ export class Physics
         }
     }
 
-    console.log(`Broadphase Candidates: ${candidates.length}`);
+    //console.log(`Broadphase Candidates: ${candidates.length}`);
 
     return candidates;
    }
@@ -173,7 +173,7 @@ export class Physics
     }
 
     
-    console.log(`Narrowphase Collisions: ${collisions.length}`);
+    //console.log(`Narrowphase Collisions: ${collisions.length}`);
 
     return collisions;
    }

@@ -69,6 +69,19 @@ function setupLights() {
 
 
 
+function onMouseDown(event){
+  if(player.controls.isLocked && player.selectedCoords){
+    console.log(`removing blocks at ${JSON.stringify(player.selectedCoords)}`)
+    world.removeBlock(
+      player.selectedCoords.x,
+      player.selectedCoords.y,
+      player.selectedCoords.z
+    );
+  }
+}
+document.addEventListener('mousedown',onMouseDown);
+
+
 
 // Render loop
 let previousTime=performance.now();
@@ -82,8 +95,8 @@ function animate() {
     
   // Only update physics when player controls are locked
   if (player.controls.isLocked) {
+    player.update(world);
     physics.update(dt, player, world);
-   
     world.update(player);
 
     
