@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+import { blocks } from './blocks';
 
 
 
@@ -23,6 +24,7 @@ export class Player {
 
   raycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(), 0, 3);
   selectedCoords = null;
+  activeBlockId = blocks.grass.id;
 
   /**
    * @param {THREE.Scene} scene
@@ -100,6 +102,12 @@ export class Player {
         this.selectedCoords.applyMatrix4(blockMatrix);
 
 
+         // If we are adding a block to the world,move the selection indicator 
+         // to the nearest adjacent block
+        if (this.activeBlockId !== blocks.empty.id) {
+          this.selectedCoords.add(intersection.normal);
+        }
+        
         this.selectionHelper.position.copy(this.selectedCoords);
         this.selectionHelper.visible = true;
       }else {
@@ -157,7 +165,18 @@ export class Player {
         this.controls.lock();
         console.log('controls locked');
       }
+
     switch(event.code){
+      case 'Digit0':
+      case 'Digit1':
+      case 'Digit2':
+      case 'Digit3':
+      case 'Digit4':
+      case 'Digit5':
+        this.activeBlockId=Number(event.key);
+        console.log(`activeBlockId = ${event.key}`)
+        break;
+
         case'KeyW':
         this.input.z=this.maxSpeed;
         break;
