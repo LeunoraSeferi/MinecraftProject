@@ -23,12 +23,10 @@ document.body.appendChild(renderer.domElement);
 
 // Camera setup
 const orbitCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight);
-orbitCamera.position.set(-32,16,-32);
-
-
-
+orbitCamera.position.set(-20,20,-20);
+orbitCamera.layers.enable(1);
 const controls = new OrbitControls(orbitCamera, renderer.domElement);
-controls.target.set(16,0,16);
+controls.target.set(16,16,16);
 controls.update();
 // Scene setup
 const scene = new THREE.Scene();

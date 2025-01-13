@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { WorldChunk } from './worldChunk';
+import { DataStore } from './dataStore';
 
 export class World extends THREE.Group {
 
@@ -19,7 +20,7 @@ export class World extends THREE.Group {
    drawDistance = 3;
 
     chunkSize = { 
-    width: 64, 
+    width: 24, 
     height: 32
     };
 
@@ -27,9 +28,26 @@ export class World extends THREE.Group {
     params = {
         seed:0,
         terrain: {
-            scale: 100,
-            magnitude: 0.10,
-            offset: 0.2
+            scale: 80,
+            magnitude: 10,
+            offset: 4,
+            waterOffset: 5
+        },
+        trees: {
+          trunk: {
+              minHeight: 4,
+              maxHeight: 7
+          },
+          canopy: {
+              minRadius: 2,
+              maxRadius: 4,
+              density: 0.5 // Vary between 0.0 and 1.0
+          },
+          frequency: 0.01
+        },
+        clouds: {
+          scale: 30,
+          density: 0.5
         }
     };
 
