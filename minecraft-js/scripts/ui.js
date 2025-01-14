@@ -51,6 +51,6 @@ export function createUI(scene,world,player) {
   cloudsFolder.add(world.params.clouds, 'scale', 0, 100).name('Cloud Size');
 
     gui.onChange(() => {
-        world.generate();
+        world.generate(true);
     });
 }

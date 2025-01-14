@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {World} from './world';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 import { blocks } from './blocks';
+import { Tool } from './tool';
 
 
 
@@ -25,7 +26,9 @@ export class Player {
 
   raycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(), 0, 3);
   selectedCoords = null;
-  activeBlockId = blocks.grass.id;
+  activeBlockId = blocks.empty.id;
+
+  tool=new Tool();
 
   /**
    * @param {THREE.Scene} scene
@@ -35,6 +38,9 @@ export class Player {
     this.camera.layers.enable(1);
     scene.add(this.camera);
     //scene.add(this.cameraHelper);
+
+
+    this.camera.add(this.tool);
 
     document.addEventListener('keydown', this.onKeyDown.bind(this));
     document.addEventListener('keyup',this.onKeyUp.bind(this));
@@ -180,8 +186,18 @@ export class Player {
       case 'Digit6':
       case 'Digit7':
       case 'Digit8':
-      case 'Digit9':
+        // Update the selected toolbar icon
+        document.getElementById(`toolbar-${this.activeBlockId}`)?.classList.remove('selected');
+       
+
+
         this.activeBlockId=Number(event.key);
+
+        document.getElementById(`toolbar-${event.key}`)?.classList.add('selected');
+
+        // Update the pickaxe visibility
+        this.tool.visible = (this.activeBlockId === 0);
+
         console.log(`activeBlockId = ${event.key}`)
         break;
 
@@ -208,6 +224,8 @@ export class Player {
           break;
       }
   }
+
+  
 
   /**
    * Event handler for 'keyup' event
