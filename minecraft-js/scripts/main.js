@@ -31,7 +31,7 @@ controls.target.set(16,16,16);
 controls.update();
 // Scene setup
 const scene = new THREE.Scene();
-scene.fog=new THREE.Fog(0x80a0e0, 50, 100);
+scene.fog=new THREE.Fog(0x80a0e0, 500, 1000);
 
 const world = new World();
 world.generate();

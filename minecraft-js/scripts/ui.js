@@ -27,8 +27,14 @@ export function createUI(scene,world,player) {
 
 
     const biomesFolder = gui.addFolder('Biomes');
-    biomesFolder.add(world.params.biomes.temperature, 'scale', 10,500).name('Temperature Scale');
-    biomesFolder.add(world.params.biomes.humidity, 'scale', 10,500).name('Humidity Scale');
+    biomesFolder.add(world.params.biomes, 'scale', 10, 500).name('Biome Scale');
+    biomesFolder.add(world.params.biomes.variation, 'amplitude', 0, 1).name('Variation Amplitude');
+    biomesFolder.add(world.params.biomes.variation, 'scale', 10, 500).name('Variation Scale');
+    biomesFolder.add(world.params.biomes, 'tundraToTemperate', 0, 1).name('Tundra -> Temperate');
+    biomesFolder.add(world.params.biomes, 'temperateToJungle', 0, 1).name('Temperate -> Jungle');
+    biomesFolder.add(world.params.biomes, 'jungleToDesert', 0, 1).name('Jungle -> Desert');
+
+
 
     const resourcesFolder = terrainFolder.addFolder('Resources').close();
     resources.forEach(resource => {

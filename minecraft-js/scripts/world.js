@@ -17,7 +17,7 @@ export class World extends THREE.Group {
   * the adjacent chunks are rendered; if set to 2, the
   * chunks adjacent to those are rendered, and so on.
   */
-   drawDistance = 1;
+   drawDistance = 3;
 
     chunkSize = { 
     width: 24, 
@@ -29,17 +29,19 @@ export class World extends THREE.Group {
         seed:0,
         terrain: {
             scale: 80,
-            magnitude: 0,
-            offset: 6,
+            magnitude: 10,
+            offset: 5,
             waterOffset: 3
         },
         biomes: {
-          temperature:{
-            scale:10
+          scale:200,
+          variation: {
+            amplitude: 0.2,
+            scale: 50
           },
-          humidity:{
-            scale:10
-          }
+          tundraToTemperate: 0.1,
+          temperateToJungle: 0.5,
+          jungleToDesert: 0.9
        },
         trees: {
           trunk: {
