@@ -54,16 +54,19 @@ const sun = new THREE.DirectionalLight();
 
 // Lighting setup
 function setupLights() {
-    
-    sun.position.set(50,50,50);
+    sun.intensity=3;
+    sun.position.set(20,20,20);
     sun.castShadow=true;
-    sun.shadow.camera.left=-100;
-    sun.shadow.camera.right=100;
-    sun.shadow.camera.bottom=-100;
-    sun.shadow.camera.top=100;
+
+
+    // Set the size of the sun's shadow box
+    sun.shadow.camera.left=-50;
+    sun.shadow.camera.right=50;
+    sun.shadow.camera.bottom=-50;
+    sun.shadow.camera.top=50;
     sun.shadow.camera.near=0.1;
-    sun.shadow.camera.far=200;
-    sun.shadow.bias=-0.0001;
+    sun.shadow.camera.far=100;
+    sun.shadow.bias=-0.0005;
     sun.shadow.mapSize=new THREE.Vector2(2048,2048);
     scene.add(sun);
     scene.add(sun.target);

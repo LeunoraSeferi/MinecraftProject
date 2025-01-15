@@ -65,6 +65,29 @@ initializeTerrain() {
     }
 }
 
+ /**
+   * Get the biome at the local chunk coordinates (x,z)
+   * @param {SimplexNoise} simplex
+   * @param {number} x 
+   * @param {number} z 
+   */
+    getBiome(simplex,x,z){
+    const temperature = 0.5 * simplex.noise(
+    (this.position.x + x) / this.params.biomes.temperature.scale,
+    (this.position.z + z) / this.params.biomes.temperature.scale
+     ) + 0.5;
+
+
+     //console.log(temperature);
+    
+     if(temperature > 0.5){
+        return 'Desert';
+     } else{
+        return 'Temperate';
+     }
+
+}
+
 /**
  * Generates the resources (coal, stone, etc.) for the world.
  */
@@ -121,7 +144,14 @@ initializeTerrain() {
                 if(y <= this.params.terrain.waterOffset && y <= height){
                     this.setBlockId(x, y, z, blocks.sand.id);
                 }else if (y === height) {
-                    this.setBlockId(x, y, z, blocks.grass.id);
+                const biome =this.getBiome(simplex,x,z);
+                let groundBlockType;
+                if(biome === 'Desert'){
+                    groundBlockType = blocks.sand.id;
+                  } else if(biome === 'Temperate'){
+                    groundBlockType = blocks.grass.id;
+                  }
+                    this.setBlockId(x, y, z, groundBlockType);
                 }else if (y < height && this.getBlock(x, y, z).id === blocks.empty.id) {
                     this.setBlockId(x, y, z, blocks.dirt.id);
                 } else if (y > height) {
