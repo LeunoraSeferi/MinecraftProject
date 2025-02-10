@@ -3,259 +3,319 @@ import { blocks } from './blocks';
 import { Player } from './player';
 import { World } from './world';
 
+/**
+ * Ky skript menaxhon fizikën e lojës, përfshirë përplasjet dhe gravitetin. Ai:
+Përditëson lëvizjen e lojtarit duke aplikuar gravitetin dhe input-et.
+Detekton përplasjet duke përdorur broadPhase (kërkim i përgjithshëm) dhe narrowPhase (kontroll i detajuar).
+Zgjidh përplasjet duke rregulluar pozicionin dhe shpejtësinë e lojtarit.
+Vizualizon përplasjet me ndihmës vizualë për debug.
+ */
 
 const collisionMaterial = new THREE.MeshBasicMaterial({
-    color: 0xff0000,
-    transparent: true,
-    opacity: 0.2
-  });
-  const collisionGeometry = new THREE.BoxGeometry(1.001, 1.001, 1.001);
+  color: 0xff0000, // Ngjyra e kuqe për të treguar zonën e përplasjes.
+  transparent: true, // E bën materialin gjysmë transparent.
+  opacity: 0.2 // Vendos një transparencë të lehtë (20% e dukshme).
+});
 
+const collisionGeometry = new THREE.BoxGeometry(1.001, 1.001, 1.001);
+// Krijon një kub shumë të vogël më të madh se 1x1x1 për të treguar kufirin e përplasjes.
+
+// Material për kontaktin (kur një objekt prek një tjetër)
 const contactMaterial = new THREE.MeshBasicMaterial({
-     wireframe: true, 
-     color: 0x00ff00 });
+  wireframe: true, // Shfaq vetëm skicat e formës për pamje më të qartë.
+  color: 0x00ff00 // Ngjyra jeshile për të dalluar zonën e kontaktit.
+});
 
 const contactGeometry = new THREE.SphereGeometry(0.05, 6, 6);
+// Krijon një sferë shumë të vogël me rreze 0.05 për të treguar pikën e kontaktit.
 
 
-export class Physics 
-{
 
-    simulationRate=200;
-    timestep=1/this.simulationRate;
-    accumulator=0;
-    gravity=32;
+export class Physics {
+    
+  simulationRate = 200; // Shkalla e simulimit fizik (200 hapa në sekondë).
+  timestep = 1 / this.simulationRate; // Intervali kohor i çdo hapi të simulimit.
+  accumulator = 0; // Akumulatori për ruajtjen e kohës së mbetur midis hapave.
+  gravity = 32; // Forca e gravitetit në lojë.
+
+  constructor(scene) {
+      this.helpers = new THREE.Group();  
+      // Krijon një grup ndihmësish vizualë për fizikën.
+
+      scene.add(this.helpers);  
+      // Shton ndihmësit në skenë për të parë vizualisht kufijtë e fizikës (opsionale).
+  }
 
 
-    constructor(scene) {
-        this.helpers = new THREE.Group();
-        scene.add(this.helpers);
-    }
+    /**
+ * Përditëson simulimin fizik me kalimin e kohës 'dt'.
+ * @param {number} dt - Diferenca e kohës midis frame-ve.
+ * @param {Player} player - Lojtari që ndikohet nga fizika.
+ * @param {World} world - Bota e lojës ku ndodhen përplasjet.
+ */
+update(dt, player, world) {
+  this.accumulator += dt;  
+  // Akumulon kohën për të siguruar përditësim të qëndrueshëm të fizikës.
 
-     /**
-   * Moves the physics simulation forward in time by 'dt'
-   * @param {number} dt 
-   * @param {Player} player
-   * @param {World} world
-   */
-      update(dt, player, world) {
-        this.accumulator+=dt;
+  while (this.accumulator >= this.timestep) {
+      this.helpers.clear();  
+      // Pastron ndihmësit vizualë për përplasjet nga frame-i i mëparshëm.
 
-        while(this.accumulator >= this.timestep){
-        this.helpers.clear();
-        player.velocity.y -= this.gravity*this.timestep;
-        player.applyInputs(this.timestep);
-        player.updateBoundsHelper();
-        this.detectCollisions(player, world);
-        this.accumulator-=this.timestep;
-        }
-        
-    }
+      player.velocity.y -= this.gravity * this.timestep;  
+      // Aplikohet graviteti duke zvogëluar shpejtësinë në drejtim të poshtëm.
+
+      player.applyInputs(this.timestep);  
+      // Aplikohet lëvizja e lojtarit bazuar në input-et e tij.
+
+      player.updateBoundsHelper();  
+      // Përditëson kufijtë e lojtarit për detektimin e përplasjes.
+
+      this.detectCollisions(player, world);  
+      // Kontrollon përplasjet e lojtarit me botën.
+
+      this.accumulator -= this.timestep;  
+      // Zvogëlon kohën e akumuluar për të ruajtur balancën e simulimit.
+  }
+}
 
     
   /**
-   * Main function for collision detection
-   * @param {Player} player
-   * @param {World} world
-   */
-   detectCollisions(player, world) {
-    player.onGround=false;
-   const candidates = this.broadPhase(player, world);
-   const collisions = this.narrowPhase(candidates, player);
+ * Funksioni kryesor për detektimin e përplasjeve.
+ * @param {Player} player - Lojtari që kontrollohet për përplasje.
+ * @param {World} world - Bota ku ndodhen objektet e përplasjes.
+ */
+detectCollisions(player, world) {
+  player.onGround = false;  
+  // Inicializon statusin e lojtarit, duke supozuar që ai nuk është në tokë.
 
+  const candidates = this.broadPhase(player, world);  
+  // Kryen fazën e parë të përplasjes (kontroll i përgjithshëm) për të gjetur objektet e mundshme.
 
-   if (collisions.length > 0) {
-    this.resolveCollisions(collisions,player);
+  const collisions = this.narrowPhase(candidates, player);  
+  // Kryen fazën e dytë (kontroll i detajuar) për të përcaktuar përplasjet e sakta.
+
+  if (collisions.length > 0) {  
+      this.resolveCollisions(collisions, player);  
+      // Nëse ka përplasje, thirret funksioni për t'i zgjidhur ato.
   }
- }
+}
 
   /**
-   * Performs a rough search against the world to return all
-   * possible blocks the player may be colliding with
-   * @param {Player} player
-   * @param {World} world
-   * @returns {[]}
-   */
-   broadPhase(player, world) {
-    const candidates = [];
+ * Kryen një kërkim të përgjithshëm për të gjetur blloqet e mundshme 
+ * me të cilat lojtari mund të përplaset.
+ * @param {Player} player - Lojtari që po kontrollohet për përplasje.
+ * @param {World} world - Bota ku ndodhen blloqet.
+ * @returns {[]} - Lista e blloqeve të mundshme për përplasje.
+ */
+broadPhase(player, world) {
+  const candidates = [];  
+  // Lista që do të mbajë blloqet e mundshme për përplasje.
 
-    //Get the extents of the player
-    const extents={
-        x:{
-            min:Math.floor(player.position.x - player.radius),
-            max:Math.ceil(player.position.x + player.radius)
-        },
-        y:{
-            min:Math.floor(player.position.y - player.height),
-            max: Math.ceil(player.position.y)
-        },
-        z:{
-            min:Math.floor(player.position.z - player.radius),
-            max:Math.ceil(player.position.z + player.radius)
+  // Llogarit kufijtë e lojtarit për të përcaktuar zonën e kontrollit.
+  const extents = {
+      x: {
+          min: Math.floor(player.position.x - player.radius), // Kufiri minimal në boshtin X.
+          max: Math.ceil(player.position.x + player.radius)  // Kufiri maksimal në boshtin X.
+      },
+      y: {
+          min: Math.floor(player.position.y - player.height), // Kufiri minimal në boshtin Y (lartësi e lojtarit).
+          max: Math.ceil(player.position.y)  // Kufiri maksimal në boshtin Y.
+      },
+      z: {
+          min: Math.floor(player.position.z - player.radius), // Kufiri minimal në boshtin Z.
+          max: Math.ceil(player.position.z + player.radius)  // Kufiri maksimal në boshtin Z.
+      }
+  }
 
-        }
-    }
+    // Kalon nëpër të gjithë blloqet brenda kufijve të lojtarit
+// Nëse blloku nuk është bosh, e shton në listën e përplasjeve
+for (let x = extents.x.min; x <= extents.x.max; x++) {
+  for (let y = extents.y.min; y <= extents.y.max; y++) {
+      for (let z = extents.z.min; z <= extents.z.max; z++) {
+          const block = world.getBlock(x, y, z); // Merr bllokun në këto koordinata
+          if (block && block.id !== blocks.empty.id) {  
+              // Nëse blloku ekziston dhe nuk është bosh, është kandidat për përplasje
+              const blockPos = { x, y, z };
+              candidates.push(blockPos); // Shton bllokun në listën e përplasjeve
+              this.addCollisionHelper(blockPos); // Shton ndihmës vizual për përplasjen
+          }
+      }
+  }
+}
 
-    // Loop through all blocks within the player's extents
-    // If they aren't empty, then they are a possible collision candidate
-    for(let x = extents.x.min;x <= extents.x.max;x++){
-        for(let y = extents.y.min;y <= extents.y.max;y++){
-            for(let z = extents.z.min;z <= extents.z.max;z++){
-                const block = world.getBlock(x,y,z);
-                if(block && block.id !== blocks.empty.id){
-                    const blockPos={x,y,z};
-                    candidates.push(blockPos);
-                    this.addCollisionHelper(blockPos);
-                }
-            }
-        }
-    }
-
-    //console.log(`Broadphase Candidates: ${candidates.length}`);
-
-    return candidates;
-   }
+// Kthen listën e blloqeve të mundshme për përplasje
+return candidates;
+}
 
    
   /**
-   * Narrows down the blocks found in the broad-phase to the set
-   * of blocks the player is actually colliding with
-   * @param {{ x:number,y:number,z:number }[]} candidates 
-    * @param {Player} player
-   * @returns 
-   */
-   narrowPhase(candidates, player) {
-    const collisions = [];
+ * Përpilon listën përfundimtare të blloqeve me të cilat lojtari po përplaset realisht.
+ * @param {{ x:number, y:number, z:number }[]} candidates - Lista e blloqeve të mundshme për përplasje.
+ * @param {Player} player - Lojtari që po kontrollohet për përplasje.
+ * @returns  - Lista e blloqeve me të cilat ka përplasje të vërtetë.
+ */
+narrowPhase(candidates, player) {
+  const collisions = [];  
+  // Lista e blloqeve me të cilat lojtari ka një përplasje të vërtetë.
 
-    for (const block of candidates) {
-      // Get the point on the block that is closest to the center of the player's
-      // bounding cylinder
+  for (const block of candidates) {  
+      // Kalon nëpër secilin bllok të mundshëm nga `broadPhase`.
+
+      // Merr pozicionin e lojtarit
       const p = player.position;
+
+      // Gjen pikën më të afërt të bllokut në qendër të lojtarit
       const closestPoint = {
-        x: Math.max(block.x - 0.5, Math.min(p.x, block.x + 0.5)),
-        y: Math.max(block.y - 0.5, Math.min(p.y - (player.height / 2), block.y + 0.5)),
-        z: Math.max(block.z - 0.5, Math.min(p.z, block.z + 0.5))
+          x: Math.max(block.x - 0.5, Math.min(p.x, block.x + 0.5)),
+          y: Math.max(block.y - 0.5, Math.min(p.y - (player.height / 2), block.y + 0.5)),
+          z: Math.max(block.z - 0.5, Math.min(p.z, block.z + 0.5))
       };
-        //2.Determine if point is inside player's bounding cylinder
-         // Get distance along each axis between closest point and the center
-      // of the player's bounding cylinder
-      const dx = closestPoint.x - player.position.x;
-      const dy = closestPoint.y - (player.position.y - (player.height / 2));
-      const dz = closestPoint.z - player.position.z;
 
-      if (this.pointInPlayerBoundingCylinder(closestPoint, player)) {
-         // Compute the overlap between the point and the player's bounding
-        // cylinder along the y-axis and in the xz-plane
-        const overlapY = (player.height / 2) - Math.abs(dy);
-        const overlapXZ = player.radius - Math.sqrt(dx * dx + dz * dz);
+        // 2. Përcakton nëse pika më e afërt është brenda cilindrit kufizues të lojtarit
 
-          // Compute the normal of the collision (pointing away from the contact point)
-        // and the overlap between the point and the player's bounding cylinder
-        let normal, overlap;
-        if (overlapY < overlapXZ) {
-          normal = new THREE.Vector3(0, -Math.sign(dy), 0);
-          overlap = overlapY;
-          player.onGround=true;
-        } else {
-          normal = new THREE.Vector3(-dx, 0, -dz).normalize();
-          overlap = overlapXZ;
-        }
+// Llogarit distancën midis pikës më të afërt dhe qendrës së lojtarit
+const dx = closestPoint.x - player.position.x;  
+const dy = closestPoint.y - (player.position.y - (player.height / 2));  
+const dz = closestPoint.z - player.position.z;  
 
-        collisions.push({
-            block,
-            contactPoint: closestPoint,
-            normal,
-            overlap
-          });
+if (this.pointInPlayerBoundingCylinder(closestPoint, player)) {  
+    // Nëse pika është brenda cilindrit kufizues të lojtarit
 
-          this.addContactPointHelper(closestPoint);
-      }
-    }
+    // Llogarit sa shumë pika mbivendoset në boshtin Y (vertikalisht)
+    const overlapY = (player.height / 2) - Math.abs(dy);  
 
+    // Llogarit sa shumë pika mbivendoset në planin XZ (horizontalisht)
+    const overlapXZ = player.radius - Math.sqrt(dx * dx + dz * dz);
+
+
+         // Llogarit normalen e përplasjes (drejtimi i forcës që largon lojtarin nga blloku)
+// dhe sasinë e mbivendosjes midis lojtarit dhe bllokut
+let normal, overlap;
+
+if (overlapY < overlapXZ) {  
+    // Nëse mbivendosja në boshtin Y është më e vogël se në planin XZ:
+    normal = new THREE.Vector3(0, -Math.sign(dy), 0);  
+    // Vektori i normalizuar drejtuar lart ose poshtë për përplasje vertikale.
+
+    overlap = overlapY;  
+    // Përdor mbivendosjen vertikale si faktor për shtyrjen e lojtarit.
+
+    player.onGround = true;  
+    // Vendos lojtarin si "në tokë" pasi ka një përplasje poshtë tij.
+} else {  
+    // Përndryshe, përplasja ndodh në planin horizontal XZ.
+    normal = new THREE.Vector3(-dx, 0, -dz).normalize();  
+    // Normalja drejtuar larg nga qendra e lojtarit për ta shtyrë atë jashtë.
+
+    overlap = overlapXZ;  
+    // Përdor mbivendosjen horizontale për të korrigjuar pozicionin.
+}
+
+// Shton informacionin e përplasjes në listën e përplasjeve
+collisions.push({
+    block,  // Blloku me të cilin lojtari është përplasur
+    contactPoint: closestPoint,  // Pika e kontaktit midis lojtarit dhe bllokut
+    normal,  // Drejtimi i forcës së përplasjes
+    overlap  // Shkalla e mbivendosjes për të korrigjuar pozicionin e lojtarit
+});
+
+this.addContactPointHelper(closestPoint);  
+// Shton një ndihmës vizual për të parë pikën e kontaktit në skenë.
+}
+  }
     
-    //console.log(`Narrowphase Collisions: ${collisions.length}`);
+    // console.log(`Narrowphase Collisions: ${collisions.length}`);  
+// Printon numrin e përplasjeve të identifikuara në `narrowPhase` (për debug).
 
-    return collisions;
-   }
+return collisions;  
+// Kthen listën përfundimtare të përplasjeve për t'u zgjidhur.
+}
+/**
+ * Zgjidh përplasjet e gjetura në fazën `narrowPhase`.
+ * @param {object} collisions - Lista e përplasjeve të identifikuara.
+ * @param {Player} player - Lojtari që ndikohet nga përplasjet.
+ */
+resolveCollisions(collisions, player) {
+    // Rendit përplasjet nga mbivendosja më e vogël te më e madhja
+    collisions.sort((a, b) =>{
+
+     a.overlap - b.overlap;
+});
+
+    for (const collision of collisions) {
+        // Pasi lojtari lëviz pas zgjidhjes së çdo përplasjeje,
+        // rishikojmë nëse pika e kontaktit është ende brenda cilindrit të lojtarit.
+        if (!this.pointInPlayerBoundingCylinder(collision.contactPoint, player)) continue;
+
+
+
+
+// 1. Rregullon pozicionin e lojtarit për të shmangur mbivendosjen me bllokun
+let deltaPosition = collision.normal.clone();  
+// Kopjon normalen e përplasjes për të përcaktuar drejtimin e lëvizjes larg nga përplasja.
+
+deltaPosition.multiplyScalar(collision.overlap);  
+// Shumëzon normalen me vlerën e mbivendosjes për të llogaritur sa larg duhet të zhvendoset lojtari.
+
+player.position.add(deltaPosition);  
+// Zhvendos lojtarin larg përplasjes për të parandaluar mbivendosjen me bllokun.
+
+// 2. Negon shpejtësinë e lojtarit përgjatë normales së përplasjes
+// Llogarit komponentin e shpejtësisë së lojtarit përgjatë normales së përplasjes
+let magnitude = player.worldVelocity.dot(collision.normal);  
+
+// Llogarit vektorin që duhet të largohet nga shpejtësia e lojtarit
+let velocityAdjustment = collision.normal.clone().multiplyScalar(magnitude);  
+
+// Aplikon ndryshimin e shpejtësisë për ta ndaluar lojtarin nga lëvizja në drejtimin e përplasjes
+player.applyWorldDeltaVelocity(velocityAdjustment.negate());  
+    }
+  }
+
 
    /**
-   * Resolves each of the collisions found in the narrow-phase
-   * @param {object} collisions 
-   * @param {Player} player
-   */
+ * Vizualizon bllokun me të cilin lojtari po përplaset.
+ * @param {THREE.Object3D} block - Blloku që po përplaset me lojtarin.
+ */
+addCollisionHelper(block) {
+  const blockMesh = new THREE.Mesh(collisionGeometry, collisionMaterial);
+  // Krijon një kub vizual për të treguar zonën e përplasjes.
 
-     resolveCollisions(collisions, player) {
-            // Resolve the collisions in order of the smallest overlap to the largest
-            collisions.sort((a, b) => {
-              return a.overlap - b.overlap;
-            });
+  blockMesh.position.copy(block);
+  // Vendos bllokun në koordinatat e tij në botën e lojës.
 
-        for (const collision of collisions) {
-    // We need to re-check if the contact point is inside the player bounding
-      // cylinder for each collision since the player position is updated after
-      // each collision is resolved
-      if (!this.pointInPlayerBoundingCylinder(collision.contactPoint, player)) continue;
+  this.helpers.add(blockMesh);
+  // Shton bllokun në grupin e ndihmësve vizualë.
+}
 
+/**
+* Vizualizon pikën e kontaktit gjatë një përplasjeje.
+* @param {{ x, y, z }} p - Pika e kontaktit në hapësirën 3D.
+*/
+addContactPointHelper(p) {
+  const contactMesh = new THREE.Mesh(contactGeometry, contactMaterial);
+  // Krijon një sferë të vogël për të treguar pikën e kontaktit.
 
+  contactMesh.position.copy(p);
+  // Vendos sferën në pikën e kontaktit.
 
-        //1.Adjust position of player so the block and player are no longer overlapping
-      let deltaPosition = collision.normal.clone();
-      deltaPosition.multiplyScalar(collision.overlap);
-      player.position.add(deltaPosition);
+  this.helpers.add(contactMesh);
+  // Shton ndihmësin vizual në skenë.
+}
 
-            //2)Negate player's velocity along the collision normal
-             // Get the magnitude of the player's velocity along the collision normal
-            let magnitude = player.worldVelocity.dot(collision.normal);
-            // Remove that part of the velocity from the player's velocity
-            let velocityAdjustment = collision.normal.clone().multiplyScalar(magnitude);
+/**
+* Kontrollon nëse pika `p` është brenda cilindrit kufizues të lojtarit.
+* @param {{ x: number, y: number, z: number }} p - Pika që po kontrollohet.
+* @param {Player} player - Lojtari që po krahasohet.
+* @returns {boolean} - Kthen `true` nëse pika është brenda cilindrit, përndryshe `false`.
+*/
+pointInPlayerBoundingCylinder(p, player) {
+  const dx = p.x - player.position.x;
+  const dy = p.y - (player.position.y - (player.height / 2));
+  const dz = p.z - player.position.z;
+  const r_sq = dx * dx + dz * dz;
 
-            
-        // Apply the velocity to the player
-        player.applyWorldDeltaVelocity(velocityAdjustment.negate());
-        }
-    }
-
-
-    /**
-   * Visualizes the block the player is colliding with
-   * @param {THREE.Object3D} block 
-   */
-     addCollisionHelper(block) {
-        const blockMesh = new THREE.Mesh(collisionGeometry, collisionMaterial);
-        blockMesh.position.copy(block);
-        this.helpers.add(blockMesh);
-      }
-
-    /**
-   * Visualizes the contact at the point 'p'
-   * @param {{ x, y, z }} p 
-   */
-    addContactPointHelper(p) {
-        const contactMesh = new THREE.Mesh(contactGeometry, contactMaterial);
-        contactMesh.position.copy(p);
-        this.helpers.add(contactMesh);
-    }
-    
-
-     /**
-   * Returns true if the point 'p' is inside the player's bounding cylinder
-   * @param {{ x: number, y: number, z: number }} p 
-   * @param {Player} player 
-   * @returns {boolean}
-   */
-      pointInPlayerBoundingCylinder(p, player) {
-        const dx = p.x - player.position.x;
-        const dy = p.y - (player.position.y - (player.height / 2));
-        const dz = p.z - player.position.z;
-        const r_sq = dx * dx + dz * dz;
-
-        // Check if contact point is inside the player's bounding cylinder
-    return (Math.abs(dy) < player.height / 2) && (r_sq < player.radius * player.radius);
-
-
-    //p-center of bounding cylinder
-    //q-closest point on box
-    //r-radius of bounding cylinder
-
-      }
+  // Kontrollon nëse pika `p` është brenda lartësisë dhe rrezes së cilindrit të lojtarit.
+  return (Math.abs(dy) < player.height / 2) && (r_sq < player.radius * player.radius);
+}
 }

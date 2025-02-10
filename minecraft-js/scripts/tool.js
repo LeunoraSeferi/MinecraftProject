@@ -1,78 +1,66 @@
-
 import * as THREE from 'three';
 
+/**
+ * Klasa `Tool` përfaqëson një mjet 3D (p.sh., kazma) që lojtari mund të përdorë.
+ * Trashëgon nga `THREE.Group` për ta përfshirë në skenën 3D.
+ */
 export class Tool extends THREE.Group {
-    // Whether or not the tool is currently animating
-    animate = false;
+    animate = false; // Tregon nëse mjeti po lëviz.
+    animationAmplitude = 0.5; // Amplituda e lëvizjes së animacionit.
+    animationDuration = 750; // Kohëzgjatja e animacionit në milisekonda.
+    animationStart = 0; // Koha kur animacioni fillon.
+    animationSpeed = 0.025; // Shpejtësia e animacionit (rad/s).
+    animation = undefined; // Ruajtja e animacionit aktual.
+    toolMesh = undefined; // 3D objekti i mjetit.
 
-    //Amplitude of the tool animation
-    animationAmplitude = 0.5;
-
-    //Duration of the animation
-    animationDuration = 750;
-
-    // Start time for the animation
-    animationStart = 0;
-
-    // Speed of the tool animation in rad/s
-    animationSpeed = 0.025;
-
-    // Currently active animation
-    animation = undefined;
-
-    // The 3D mesh of the actual tool
-    toolMesh = undefined;
-
-    get animationTime(){
+/**
+ * Kthen kohën që ka kaluar nga fillimi i animacionit.
+ */
+    get animationTime() {
         return performance.now() - this.animationStart;
     }
 
-    /**
-     * Trigger a new animation of the tool
-     */
-    startAnimation(){
-
-        if (this.animate) return;
+/**
+ * Nis një animacion të ri të mjetit.
+ */
+    startAnimation() {
+        if (this.animate) return; // Parandalon rifillimin e animacionit nëse është aktiv.
 
         this.animate = true;
-        this.animationStart = performance.now();
+        this.animationStart = performance.now(); // Regjistron kohën e fillimit.
 
-        //Stop existing animation
-        clearTimeout(this.animate);
+        clearTimeout(this.animate); // Ndërpret animacionin e mëparshëm.
 
-         //Set a timer to stop the animation after a specified duration
         this.animation = setTimeout(() => {
-
             this.animate = false;
-            this.toolMesh.rotation.y = 0;
-            }, this.animationDuration);
-     }
+            this.toolMesh.rotation.y = 0; // Reseton animacionin pas përfundimit.
+        }, this.animationDuration);
+    }
 
-    /**
-     * Updates the tool animation state
-     */
-    update(){
-        if(this.animate && this.toolMesh)
-        {
-
-            //Oscillate the tool back and forth 
-            this.toolMesh.rotation.y =this.animationAmplitude *
-             Math.sin(this.animationTime * this.animationSpeed);
+/**
+ * Përditëson animacionin e mjetit nëse është aktiv.
+ */
+    update() {
+        if (this.animate && this.toolMesh) {
+            // Kryen lëvizje sinusoidale për të simuluar animacionin.
+            this.toolMesh.rotation.y = this.animationAmplitude * 
+            Math.sin(this.animationTime * this.animationSpeed);
         }
     }
 
-    /**
-      * Sets the active tool mesh
-      * @param {THREE.Mesh} mesh 
-    */
-     setMesh(mesh){
-        this.clear();
-
+/**
+ * Vendos modelin 3D të mjetit aktiv.
+ * @param {THREE.Mesh} mesh - Mesh-i 3D që përfaqëson mjetin.
+ */
+    setMesh(mesh) {
+        this.clear(); // Pastron çdo mesh ekzistues.
         this.toolMesh = mesh;
-        this.add(this.toolMesh);
-        mesh.receiveShadow = true;
-        mesh.castShadow = true;
+        this.add(this.toolMesh); // Shton modelin e ri në skenë.
 
+        mesh.receiveShadow = true; // Lejon modelin të marrë hije.
+        mesh.castShadow = true; // Lejon modelin të krijojë hije.
+
+        // Vendos pozicionin, shkallën dhe rrotacionin e mjetit në dorën e lojtarit.
         this.position.set(0.6, -0.3, -0.5);
         this.scale.set(0.5, 0.5, 0.5);
         this.rotation.z = Math.PI / 2;
